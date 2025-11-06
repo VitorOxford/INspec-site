@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-// CORREÇÃO: Adicionado 'type' antes de 'InputProps'
 import { Input, type InputProps } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
@@ -11,8 +10,9 @@ import {
   CheckCircle, ArrowRight, ArrowLeft 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from '@/contexts/ThemeContext'; // NOVO: Importe o hook de tema
 
-// --- Componentes de UI Internos (para manter o polimento) ---
+// --- Componentes de UI Internos (Tema-Aware) ---
 
 // 1. Input com Ícone
 interface IconInputProps extends InputProps {
@@ -23,12 +23,18 @@ const IconInput = React.forwardRef<HTMLInputElement, IconInputProps>(
   ({ icon: Icon, className, ...props }, ref) => {
     return (
       <div className="relative group">
-        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 
-                       transition-colors group-focus-within:text-purple-400" />
+        <Icon className={cn(
+            "absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 transition-colors", 
+            "group-focus-within:text-purple-600 dark:group-focus-within:text-purple-400"
+        )} />
         <Input
           ref={ref}
           className={cn(
-            "pl-11 h-12 bg-slate-800/50 border-slate-700 focus:border-purple-500 focus:ring-purple-500",
+            "pl-11 h-12",
+            // Light Mode
+            "bg-white border-slate-300 text-slate-900 focus:border-purple-500",
+            // Dark Mode
+            "dark:bg-slate-800/50 dark:border-slate-700 dark:text-white dark:focus:border-purple-500",
             className
           )}
           {...props}
@@ -48,20 +54,29 @@ const StyledSelect = React.forwardRef<HTMLSelectElement, StyledSelectProps>(
   ({ icon: Icon, className, options, ...props }, ref) => {
     return (
       <div className="relative group">
-        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 
-                       transition-colors group-focus-within:text-purple-400" />
+        <Icon className={cn(
+            "absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 transition-colors", 
+            "group-focus-within:text-purple-600 dark:group-focus-within:text-purple-400"
+        )} />
         <select
           ref={ref}
           className={cn(
-            "flex h-12 w-full appearance-none rounded-md border border-slate-700 bg-slate-800/50 pl-11 pr-10 py-2 text-sm text-white",
-            "focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500",
-            "placeholder:text-slate-500",
+            "flex h-12 w-full appearance-none rounded-md pl-11 pr-10 py-2 text-sm",
+            "focus:outline-none focus:ring-2 focus:ring-purple-500",
+            
+            // Light Mode
+            "bg-white border-slate-300 text-slate-900 focus:border-purple-500",
+            
+            // Dark Mode
+            "dark:bg-slate-800/50 dark:border-slate-700 dark:text-white dark:focus:border-purple-500",
             className
           )}
           {...props}
         >
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-slate-900 text-white">
+            <option key={opt.value} value={opt.value} 
+              className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" // Otimiza a cor das opções
+            >
               {opt.label}
             </option>
           ))}
@@ -76,7 +91,7 @@ const StyledSelect = React.forwardRef<HTMLSelectElement, StyledSelectProps>(
   }
 );
 
-// --- Listas de Opções ---
+// --- Listas de Opções (Inalteradas) ---
 const TamanhoEmpresa = [
   { value: "", label: "Selecione o tamanho" },
   { value: "1-10", label: "1-10 funcionários" },
@@ -114,7 +129,7 @@ const OndeConheceu = [
   { value: "outro", label: "Outro" },
 ];
 
-// --- Tipos de Dados ---
+// --- Tipos de Dados (Inalterados) ---
 type FormData = {
   fullName: string;
   email: string;
@@ -127,7 +142,7 @@ type FormData = {
   source: string;
 };
 
-// --- Componente Principal da Página ---
+// --- Componente Principal da Página (Tema-Aware) ---
 export default function SignUpPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -136,6 +151,8 @@ export default function SignUpPage() {
     fullName: "", email: "", password: "", companySize: "", industry: "",
     jobTitle: "", phone: "", document: "", source: ""
   });
+
+  const { resolvedTheme } = useTheme(); // NOVO: Use o tema resolvido
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -148,7 +165,9 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Validação final (simplificada)
-    if (!formData.phone || (!formData.document && !formData.source)) {
+    if (step < totalSteps) return; // Garante que o submit só funciona no último passo
+    
+    if (!formData.phone || !formData.source) {
       setError("Por favor, preencha os campos obrigatórios.");
       return;
     }
@@ -183,11 +202,26 @@ export default function SignUpPage() {
 
   const totalSteps = 3;
 
+  // Classes Dinâmicas de Layout
+  const mainBgClass = resolvedTheme === 'dark' 
+    ? 'from-purple-950 via-slate-950 to-blue-950 text-slate-100' 
+    : 'from-purple-50 via-white to-blue-50 text-slate-900';
+  
+  const cardClasses = resolvedTheme === 'dark'
+    ? 'bg-slate-900/50 backdrop-blur-xl border border-slate-700 shadow-2xl'
+    : 'bg-white/95 backdrop-blur-xl border border-slate-200 shadow-xl';
+    
+  const textPrimary = resolvedTheme === 'dark' ? 'text-white' : 'text-slate-900';
+  const textSecondary = resolvedTheme === 'dark' ? 'text-slate-300' : 'text-slate-600';
+  const textLabel = resolvedTheme === 'dark' ? 'text-slate-300' : 'text-slate-700';
+  const barBg = resolvedTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200';
+
+
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-6 bg-gradient-to-br from-purple-950 via-slate-950 to-blue-950 text-slate-100">
+    <div className={cn("min-h-screen w-full flex items-center justify-center p-6 bg-gradient-to-br", mainBgClass)}>
       
       {/* Card Principal */}
-      <div className="relative w-full max-w-2xl bg-slate-900/50 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl p-8 md:p-12 transition-all duration-500">
+      <div className={cn("relative w-full max-w-2xl rounded-2xl p-8 md:p-12 transition-all duration-500", cardClasses)}>
         
         {/* Logo Flutuante */}
         <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
@@ -203,11 +237,11 @@ export default function SignUpPage() {
           {step === 4 ? (
             <div className="text-center transition-opacity duration-300 animate-fadeIn">
               <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-6" />
-              <h2 className="text-3xl font-bold text-white mb-4">
+              <h2 className={cn("text-3xl font-bold mb-4", textPrimary)}>
                 Cadastro enviado!
               </h2>
-              <p className="text-slate-300 text-lg mb-8">
-                Enviamos um link de confirmação para <strong className="text-purple-400">{formData.email}</strong>.
+              <p className={cn("text-lg mb-8", textSecondary)}>
+                Enviamos um link de confirmação para <strong className="text-purple-600 dark:text-purple-400">{formData.email}</strong>.
                 Por favor, verifique sua caixa de entrada (e spam) para ativar sua conta.
               </p>
               <Link to="/auth">
@@ -221,10 +255,10 @@ export default function SignUpPage() {
             <>
               {/* Stepper (Barra de Progresso) */}
               <div className="mb-8">
-                <p className="text-sm text-slate-400 mb-2">
+                <p className="text-sm text-slate-500 mb-2">
                   Etapa {step} de {totalSteps}
                 </p>
-                <div className="w-full bg-slate-700 rounded-full h-2">
+                <div className={cn("w-full rounded-full h-2", barBg)}>
                   <div 
                     className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${(step / totalSteps) * 100}%` }}
@@ -233,7 +267,7 @@ export default function SignUpPage() {
               </div>
 
               {/* Título da Etapa */}
-              <h2 className="text-3xl font-bold text-white mb-6 text-center">
+              <h2 className={cn("text-3xl font-bold mb-6 text-center", textPrimary)}>
                 {step === 1 && "Vamos começar"}
                 {step === 2 && "Sobre sua empresa"}
                 {step === 3 && "Quase lá..."}
@@ -246,17 +280,17 @@ export default function SignUpPage() {
               {step === 1 && (
                 <div className="space-y-4 transition-opacity duration-300 animate-fadeIn">
                   <div>
-                    <Label htmlFor="fullName">Nome Completo</Label>
+                    <Label htmlFor="fullName" className={textLabel}>Nome Completo</Label>
                     <IconInput icon={User} name="fullName" id="fullName" type="text" placeholder="Seu nome"
                       value={formData.fullName} onChange={handleInput} required />
                   </div>
                   <div>
-                    <Label htmlFor="email">E-mail</Label>
+                    <Label htmlFor="email" className={textLabel}>E-mail</Label>
                     <IconInput icon={Mail} name="email" id="email" type="email" placeholder="seu@email.com"
                       value={formData.email} onChange={handleInput} required />
                   </div>
                   <div>
-                    <Label htmlFor="password">Senha</Label>
+                    <Label htmlFor="password" className={textLabel}>Senha</Label>
                     <IconInput icon={Lock} name="password" id="password" type="password" placeholder="••••••••"
                       value={formData.password} onChange={handleInput} required minLength={6} />
                   </div>
@@ -267,19 +301,19 @@ export default function SignUpPage() {
               {step === 2 && (
                 <div className="space-y-4 transition-opacity duration-300 animate-fadeIn">
                   <div>
-                    <Label htmlFor="companySize">Tamanho da Empresa</Label>
+                    <Label htmlFor="companySize" className={textLabel}>Tamanho da Empresa</Label>
                     <StyledSelect icon={Building} name="companySize" id="companySize"
                       value={formData.companySize} onChange={handleInput} required
                       options={TamanhoEmpresa} />
                   </div>
                   <div>
-                    <Label htmlFor="industry">Ramo de Atividade</Label>
+                    <Label htmlFor="industry" className={textLabel}>Ramo de Atividade</Label>
                     <StyledSelect icon={Briefcase} name="industry" id="industry"
                       value={formData.industry} onChange={handleInput} required
                       options={RamoAtividade} />
                   </div>
                   <div>
-                    <Label htmlFor="jobTitle">Seu Cargo</Label>
+                    <Label htmlFor="jobTitle" className={textLabel}>Seu Cargo</Label>
                     <IconInput icon={Info} name="jobTitle" id="jobTitle" type="text" placeholder="Ex: Diretor de TI, Gerente de RH"
                       value={formData.jobTitle} onChange={handleInput} required />
                   </div>
@@ -290,17 +324,17 @@ export default function SignUpPage() {
               {step === 3 && (
                 <div className="space-y-4 transition-opacity duration-300 animate-fadeIn">
                   <div>
-                    <Label htmlFor="phone">Telefone / WhatsApp</Label>
+                    <Label htmlFor="phone" className={textLabel}>Telefone / WhatsApp</Label>
                     <IconInput icon={Phone} name="phone" id="phone" type="tel" placeholder="(11) 99999-9999"
                       value={formData.phone} onChange={handleInput} required />
                   </div>
                   <div>
-                    <Label htmlFor="document">CPF / CNPJ (Opcional)</Label>
+                    <Label htmlFor="document" className={textLabel}>CPF / CNPJ (Opcional)</Label>
                     <IconInput icon={Info} name="document" id="document" type="text" placeholder="Seu CPF ou CNPJ"
                       value={formData.document} onChange={handleInput} />
                   </div>
                   <div>
-                    <Label htmlFor="source">Onde nos conheceu?</Label>
+                    <Label htmlFor="source" className={textLabel}>Onde nos conheceu?</Label>
                     <StyledSelect icon={Search} name="source" id="source"
                       value={formData.source} onChange={handleInput} required
                       options={OndeConheceu} />
@@ -313,7 +347,14 @@ export default function SignUpPage() {
                 <Button 
                   type="button" 
                   variant="outline"
-                  className={`border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white ${step === 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                  // Classes responsivas para o botão Voltar
+                  className={cn(
+                    "hover:shadow-lg transition-all",
+                    resolvedTheme === 'dark' 
+                        ? "border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white"
+                        : "border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900",
+                    step === 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                  )}
                   onClick={prevStep}
                   disabled={step === 1}
                 >

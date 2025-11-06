@@ -6,9 +6,11 @@ import SignUpPage from './pages/SignUpPage'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import { useAuth } from './contexts/AuthContext'
 import DashboardWrapper from './pages/DashboardWrapper'; 
-import DashboardOverviewPage from './pages/dashboard/DashboardOverviewPage'
 
-// 1. IMPORTANDO AS NOVAS PÁGINAS (PLACEHOLDERS)
+// NOVO: Importe o LoadingScreen para uso global
+import LoadingScreen from './components/common/LoadingScreen'; 
+
+import DashboardOverviewPage from './pages/dashboard/DashboardOverviewPage'
 import DashboardMonitoringPage from './pages/dashboard/DashboardMonitoringPage'
 import DashboardScreenshotsPage from './pages/dashboard/DashboardScreenshotsPage'
 import DashboardRequestsPage from './pages/dashboard/DashboardRequestsPage'
@@ -18,8 +20,10 @@ import DashboardSettingsPage from './pages/dashboard/DashboardSettingsPage'
 function App() {
   const { user, loading: authLoading } = useAuth();
   
+  // CORREÇÃO: Usar o LoadingScreen que preenche a tela
   if (authLoading) {
-    return <div className="min-h-screen bg-slate-950" />; 
+    // Retorna a tela de loading visualmente agradável
+    return <LoadingScreen isLoading={true} onLoaded={() => {}} />; 
   }
 
   return (
@@ -40,11 +44,12 @@ function App() {
         path="/dashboard"
         element={
           <ProtectedRoute>
+            {/* O DashboardWrapper deve estar com o LoadingScreen comentado 
+                para evitar loops, já que App.tsx agora lida com o loading inicial. */}
             <DashboardWrapper />
           </ProtectedRoute>
         }
       >
-        {/* 2. CORREÇÃO: TODAS AS ROTAS DO MENU AGORA ESTÃO DEFINIDAS */}
         <Route index element={<Navigate to="overview" replace />} /> 
         <Route path="overview" element={<DashboardOverviewPage />} />
         <Route path="monitoring" element={<DashboardMonitoringPage />} />

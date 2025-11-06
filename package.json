@@ -12,6 +12,7 @@
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
     "@supabase/supabase-js": "^2.80.0",
+    "apexcharts": "^5.3.6",
     "arg": "^5.0.2",
     "chokidar": "^4.0.3",
     "class-variance-authority": "^0.7.1",
@@ -20,9 +21,9 @@
     "picocolors": "^1.1.1",
     "postcss-load-config": "^6.0.1",
     "react": "^19.1.1",
+    "react-apexcharts": "^1.8.0",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.5",
-    "recharts": "^3.3.0",
     "sucrase": "^3.35.0",
     "tailwind-merge": "^3.3.1",
     "tailwind-variants": "^3.1.1"

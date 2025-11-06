@@ -12,12 +12,9 @@ export default defineConfig({
   },
   
   // ======================================================
-  // CORREÇÃO DEFINITIVA:
-  // Trocamos 'exclude' (que falhou) por 'include'.
-  // Isso FORÇA o Vite a pré-compilar 'recharts' e sua
-  // dependência 'es-toolkit', resolvendo o erro.
+  // CORREÇÃO: Removidas todas as otimizações problemáticas
   // ======================================================
   optimizeDeps: {
-    include: ['recharts', 'es-toolkit']
+    // Bloco vazio ou removido.
   },
 });

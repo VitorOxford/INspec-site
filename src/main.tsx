@@ -4,14 +4,18 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext' // Importe o provedor
+import { AuthProvider } from './contexts/AuthContext' 
+import { ThemeProvider } from './contexts/ThemeContext.tsx'; // 1. Importa o provedor de tema
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider> {/* Envolva o App com o AuthProvider */}
-        <App />
-      </AuthProvider>
+      {/* 2. Envolve tudo com o ThemeProvider */}
+      <ThemeProvider> 
+        <AuthProvider> 
+          <App />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>,
 )

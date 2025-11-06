@@ -19,6 +19,8 @@ const mockUsers = [
 export default function DashboardOverviewPage() {
   const { profile } = useAuth();
 
+  console.log(`LOG: OverviewPage - Render. Profile Full Name: ${profile?.full_name}`); // LOG DE PERFIL NA OVERVIEW
+
   return (
     <div className="space-y-8">
       {/* Cabeçalho */}

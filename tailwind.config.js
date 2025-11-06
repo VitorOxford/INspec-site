@@ -4,6 +4,10 @@ module.exports = {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  // ===================================
+  // NOVO: Adicionar darkMode: 'class'
+  // ===================================
+  darkMode: 'class', 
   theme: {
     extend: {},
   },
