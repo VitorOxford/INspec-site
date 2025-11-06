@@ -1,3 +1,4 @@
+// src/components/landing/Landing.tsx
 import React, { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import HeroSection from "./HeroSection";
@@ -7,7 +8,7 @@ import Features from "./Features";
 import Pricing from "./Pricing";
 import About from "./About";
 import Testimonials from "./Testimonials";
-import LoginSection from "./LoginSection";
+// import LoginSection from "./LoginSection"; // <-- 1. IMPORTAÇÃO REMOVIDA
 
 export default function Landing() {
   const [scrollY, setScrollY] = useState(0);
@@ -28,7 +29,7 @@ export default function Landing() {
       <Pricing />
       <About />
       <Testimonials />
-      <LoginSection />
+      {/* <LoginSection /> */} {/* <-- 2. COMPONENTE REMOVIDO */}
       
       {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-800 py-12">

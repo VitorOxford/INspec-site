@@ -1,3 +1,4 @@
+// src/components/landing/HeroSection.tsx
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
@@ -95,7 +96,11 @@ export default function HeroSection() {
         </div>
       </div>
 
-      <style jsx>{`
+      {/* CORREÇÃO: 
+        A propriedade 'jsx' foi removida. 
+        Esta tag <style> padrão funcionará perfeitamente.
+      */}
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translate(0, 0) scale(1); }
           33% { transform: translate(30px, -30px) scale(1.1); }

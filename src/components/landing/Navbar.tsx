@@ -1,6 +1,8 @@
+// src/components/landing/Navbar.tsx
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom"; // 1. IMPORTADO O LINK
 
 export default function Navbar({ scrollY }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -45,16 +47,23 @@ export default function Navbar({ scrollY }) {
                 {item.label}
               </a>
             ))}
-            <a href="#login" className="text-sm text-slate-300 hover:text-white transition-colors">
+            {/* 2. LINK ATUALIZADO */}
+            <Link
+              to="/auth"
+              className="text-sm text-slate-300 hover:text-white transition-colors"
+            >
               Login
-            </a>
+            </Link>
           </div>
 
           {/* CTA Button */}
           <div className="hidden md:block">
-            <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6">
-              Começar Teste Grátis
-            </Button>
+            {/* 2. LINK ATUALIZADO */}
+            <Link to="/auth">
+              <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6">
+                Começar Teste Grátis
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -79,16 +88,20 @@ export default function Navbar({ scrollY }) {
                 {item.label}
               </a>
             ))}
-            <a
-              href="#login"
+            {/* 2. LINK ATUALIZADO */}
+            <Link
+              to="/auth"
               className="block text-slate-300 hover:text-white transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Login
-            </a>
-            <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white">
-              Começar Teste Grátis
-            </Button>
+            </Link>
+            {/* 2. LINK ATUALIZADO */}
+            <Link to="/auth" className="block" onClick={() => setMobileMenuOpen(false)}>
+              <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white">
+                Começar Teste Grátis
+              </Button>
+            </Link>
           </div>
         )}
       </div>
