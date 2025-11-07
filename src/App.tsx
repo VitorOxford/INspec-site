@@ -1,4 +1,5 @@
 // src/App.tsx
+import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LandingPage from './pages/LandingPage'
 import AuthPage from './pages/AuthPage'
@@ -16,16 +17,45 @@ import DashboardScreenshotsPage from './pages/dashboard/DashboardScreenshotsPage
 import DashboardRequestsPage from './pages/dashboard/DashboardRequestsPage'
 import DashboardRulesPage from './pages/dashboard/DashboardRulesPage'
 import DashboardSettingsPage from './pages/dashboard/DashboardSettingsPage'
+import DashboardUsersPage from './pages/dashboard/DashboardUsersPage'
+
+
 
 function App() {
   const { user, loading: authLoading } = useAuth();
   
-  // CORREÇÃO: Usar o LoadingScreen que preenche a tela
-  if (authLoading) {
-    // Retorna a tela de loading visualmente agradável
-    return <LoadingScreen isLoading={true} onLoaded={() => {}} />; 
-  }
+  // NOVO ESTADO: Controla a transição visual
+  const [loadingComplete, setLoadingComplete] = useState(false); 
 
+  console.log(`LOG: APP - Render. AuthLoading: ${authLoading}. LoadingComplete: ${loadingComplete}.`);
+
+  // HOOK: Garante que o estado de transição seja resetado
+  useEffect(() => {
+    console.log(`LOG: APP - useEffect [authLoading] rodou. Novo authLoading: ${authLoading}.`);
+    // Se o Auth loading for reativado, resetamos o estado visual
+    if (authLoading && loadingComplete) {
+        console.log('LOG: APP - authLoading TRUE e loadingComplete TRUE. RESETANDO VISUAL.');
+        setLoadingComplete(false);
+    }
+  }, [authLoading, loadingComplete]);
+
+
+  // CORREÇÃO: Usa o LoadingScreen enquanto o AuthContext carrega OU enquanto a transição visual não está pronta.
+  if (authLoading || !loadingComplete) {
+  console.log('LOG: APP - Retornando LoadingScreen.');
+  return (
+    <LoadingScreen 
+      key={authLoading ? 'auth-loading' : 'auth-done'}  // 👈 força remontagem quando muda
+      isLoading={authLoading} 
+      onLoaded={() => {
+        console.log('LOG: APP - onLoaded() chamado pelo LoadingScreen. Disparando setLoadingComplete(true).');
+        setTimeout(() => setLoadingComplete(true), 100);
+      }}
+    />
+  );
+}
+
+  console.log('LOG: APP - Retornando Rota Principal (Dashboard/Public).');
   return (
     <Routes>
       {/* Rotas Públicas */}
@@ -44,8 +74,6 @@ function App() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            {/* O DashboardWrapper deve estar com o LoadingScreen comentado 
-                para evitar loops, já que App.tsx agora lida com o loading inicial. */}
             <DashboardWrapper />
           </ProtectedRoute>
         }
@@ -56,6 +84,7 @@ function App() {
         <Route path="screenshots" element={<DashboardScreenshotsPage />} />
         <Route path="requests" element={<DashboardRequestsPage />} />
         <Route path="rules" element={<DashboardRulesPage />} />
+        <Route path="users" element={<DashboardUsersPage />} />
         <Route path="settings" element={<DashboardSettingsPage />} />
         
         <Route path="*" element={<Navigate to="overview" replace />} />

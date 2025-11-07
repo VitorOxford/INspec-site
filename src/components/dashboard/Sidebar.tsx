@@ -6,14 +6,14 @@ import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext'; 
 import { Button } from '@/components/ui/button';
 import { 
-  LayoutDashboard, Monitor, Camera, Bell, Shield, Settings, LogOut, Moon, Sun 
+  LayoutDashboard, Monitor, Camera, Bell, Shield, Settings, LogOut, Moon, Sun, 
+  Users // <<<<<< CORREÇÃO: Ícone Users adicionado à importação
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext.tsx'; 
 
 // ===========================================
 // BLOCO FALTANTE: DEFINIÇÃO DO ARRAY menuItems
-// OBRIGATÓRIO PARA RESOLVER O ReferenceError
 // ===========================================
 const menuItems = [
   { href: "/dashboard/overview", label: "Visão Geral", icon: LayoutDashboard },
@@ -21,6 +21,8 @@ const menuItems = [
   { href: "/dashboard/screenshots", label: "Capturas", icon: Camera },
   { href: "/dashboard/requests", label: "Solicitações", icon: Bell },
   { href: "/dashboard/rules", label: "Regras", icon: Shield },
+  // NOVO ITEM (Colaboradores)
+  { href: "/dashboard/users", label: "Colaboradores", icon: Users },
 ];
 // ===========================================
 

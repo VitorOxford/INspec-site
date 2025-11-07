@@ -2,3 +2,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* FORÇA O FUNDO DA PÁGINA INTEIRA PARA PRETO NO MODO DARK */
+@layer base {
+    body {
+        @apply bg-slate-950 text-white;
+    }
+    /* Reverte para branco no modo light se necessário, mas o ThemeProvider já faz isso */
+    .light body {
+        @apply bg-white text-slate-900;
+    }
+}

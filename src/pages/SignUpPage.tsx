@@ -15,8 +15,11 @@ import { useTheme } from '@/contexts/ThemeContext'; // NOVO: Importe o hook de t
 // --- Componentes de UI Internos (Tema-Aware) ---
 
 // 1. Input com Ícone
-interface IconInputProps extends InputProps {
+interface IconInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon: React.ElementType;
+  iconPosition?: 'left' | 'right';
+  onIconClick?: () => void;
+  clickableIcon?: boolean;
 }
 
 const IconInput = React.forwardRef<HTMLInputElement, IconInputProps>(
@@ -134,6 +137,7 @@ type FormData = {
   fullName: string;
   email: string;
   password: string;
+  companyName: string;
   companySize: string;
   industry: string;
   jobTitle: string;
@@ -148,7 +152,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
-    fullName: "", email: "", password: "", companySize: "", industry: "",
+    fullName: "", email: "", password: "", companySize: "", companyName: "",  industry: "",
     jobTitle: "", phone: "", document: "", source: ""
   });
 
@@ -181,6 +185,7 @@ export default function SignUpPage() {
         options: {
           data: {
             full_name: formData.fullName,
+            company_name: formData.companyName,
             company_size: formData.companySize,
             industry: formData.industry,
             job_title: formData.jobTitle,
@@ -300,6 +305,11 @@ export default function SignUpPage() {
               {/* --- ETAPA 2: Empresa --- */}
               {step === 2 && (
                 <div className="space-y-4 transition-opacity duration-300 animate-fadeIn">
+                  <div>
+                    <Label htmlFor="companyName" className={textLabel}>Nome da Empresa</Label>
+                    <IconInput icon={Building} name="companyName" id="companyName" type="text" placeholder="Nome da sua empresa"
+                      value={formData.companyName} onChange={handleInput} required />
+                  </div>
                   <div>
                     <Label htmlFor="companySize" className={textLabel}>Tamanho da Empresa</Label>
                     <StyledSelect icon={Building} name="companySize" id="companySize"

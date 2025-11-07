@@ -239,7 +239,7 @@ export default function AuthPage() {
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-2"
-                autocomplete="username" // Sugerido pelo console
+                autoComplete="username"
               />
             </div>
             

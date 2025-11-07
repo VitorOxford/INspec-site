@@ -1,10 +1,9 @@
 // src/components/common/LoadingScreen.tsx
-// VERSÃO 5 - CORREÇÃO DEFINITIVA DO LOOP E AJUSTES DE DESIGN
+// VERSÃO FINAL DE RESOLUÇÃO DE CONGELAMENTO (TIMEOUT 0)
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // --- Configuração ---
-// VÍDEOS REMOVIDOS
 const messages = [
   'Autenticando credenciais...',
   'Carregando recursos essenciais...',
@@ -23,7 +22,7 @@ interface LoadingScreenProps {
 export default function LoadingScreen({ isLoading, onLoaded }: LoadingScreenProps) {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('Iniciando conexão segura...');
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(true); 
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number | null>(null);
@@ -37,8 +36,30 @@ export default function LoadingScreen({ isLoading, onLoaded }: LoadingScreenProp
     onLoadedRef.current = onLoaded;
   }, [onLoaded]);
 
-  // --- Lógica de Animação das Partículas ---
+  // Função de Saída Final (Garante a transição)
+  const finishLoading = useCallback(() => {
+      console.log('LOG: LOADING_SCREEN - DISPARANDO SAÍDA FINAL (FinishLoading).');
+      if (progressInterval.current) clearInterval(progressInterval.current);
+      if (messageTimeout.current) clearTimeout(messageTimeout.current);
+      
+      setMessage('Bem-vindo(a)!');
+      setProgress(100);
+      
+      // Inicia o fade-out visual
+      setTimeout(() => {
+          console.log('LOG: LOADING_SCREEN - Chamando setShow(false) para fade-out.');
+          setShow(false);
+          // Notifica App.tsx após o tempo do fade-out
+          setTimeout(() => {
+              console.log('LOG: LOADING_SCREEN - Chamando onLoaded() no final.');
+              onLoadedRef.current(); 
+          }, 550); 
+      }, 500); 
+  }, []);
+
+  // --- Lógica de Animação das Partículas (omitida) ---
   const initParticles = () => {
+    // ... (Manter a função initParticles intacta do seu código anterior) ...
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -111,54 +132,72 @@ export default function LoadingScreen({ isLoading, onLoaded }: LoadingScreenProp
     };
     window.addEventListener('resize', resizeHandler.current);
   };
+  // --- Fim da Lógica de Animação das Partículas ---
+
 
   // --- Lógica Principal de Loading ---
   const startLoadingAnimation = () => {
-    setShow(true);
+    console.log(`LOG: LOADING_SCREEN - START. Estado inicial isLoading=${isLoading}.`);
+
+    // 1. Limpeza de ciclos anteriores
+    if (progressInterval.current) clearInterval(progressInterval.current);
+    if (messageTimeout.current) clearTimeout(messageTimeout.current);
+
+    // 2. LÓGICA DE SAÍDA IMEDIATA (Se o AuthContext já terminou ao montar - F5)
+    if (!isLoading) {
+        console.log('LOG: LOADING_SCREEN - RÁPIDO: Auth já terminou. Chamando finishLoading.');
+        finishLoading();
+        return;
+    }
+
+    // 3. LÓGICA DE PROGRESSO SIMULADO (Se o AuthContext AINDA está ativo)
+    setShow(true); 
     setProgress(0);
     setMessage('Iniciando conexão segura...');
     let messageIndex = 0;
 
-    progressInterval.current = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval.current!);
-          setMessage('Bem-vindo(a)!');
-          setTimeout(() => {
-            setShow(false);
-            setTimeout(() => onLoadedRef.current(), 600); 
-          }, 1000);
-          return 100;
-        }
-        return prev + 1;
-      });
-    }, 50);
+    // Simulação do progresso (Atinge 95% em 2 segundos)
+    const totalDuration = 2000;
+    const steps = 95;
+    const stepDuration = totalDuration / steps;
 
-    const changeMessage = () => {
-      setProgress(prevProgress => {
-        if (prevProgress < 95) {
-          setMessage(messages[messageIndex % messages.length]);
-          messageIndex++;
-          messageTimeout.current = setTimeout(changeMessage, 2000);
-        }
-        return prevProgress;
-      });
+    let currentStep = 0;
+    console.log('LOG: LOADING_SCREEN - Iniciando progressInterval de simulação...');
+
+    progressInterval.current = setInterval(() => {
+      if (currentStep < steps) {
+        setProgress(currentStep + 1);
+        currentStep++;
+      } else {
+        console.log('LOG: LOADING_SCREEN - progressInterval PAROU (atingiu 95%).');
+        clearInterval(progressInterval.current!);
+      }
+    }, stepDuration);
+
+
+    // 4. Lógica de Mensagem
+    const updateMessage = () => {
+      if (progress < 95) { // Verifica se ainda não travou no 95%
+        setMessage(messages[messageIndex % messages.length]);
+        messageIndex++;
+      }
+      messageTimeout.current = setTimeout(updateMessage, 2000);
     };
-    messageTimeout.current = setTimeout(changeMessage, 1800);
+    messageTimeout.current = setTimeout(updateMessage, 1800);
   };
+  
 
   // ==================================================================
-  // CORREÇÃO DEFINITIVA DO LOOP:
-  // O array de dependências agora está VAZIO.
-  // Este useEffect só vai rodar UMA VEZ, na montagem.
+  // HOOK 1: Inicia a animação (Roda apenas na montagem)
   // ==================================================================
   useEffect(() => {
-    if (isLoading) {
-      startLoadingAnimation();
-      initParticles();
-    }
-
+    console.log('LOG: LOADING_SCREEN - useEffect []. Montagem/Remontagem. Disparando init.');
+    startLoadingAnimation();
+    initParticles();
+    
+    // Cleanup: Limpa timers e event listeners
     return () => {
+      console.log('LOG: LOADING_SCREEN - Cleanup hooks rodando.');
       if (progressInterval.current) clearInterval(progressInterval.current);
       if (messageTimeout.current) clearTimeout(messageTimeout.current);
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
@@ -166,11 +205,41 @@ export default function LoadingScreen({ isLoading, onLoaded }: LoadingScreenProp
         window.removeEventListener('resize', resizeHandler.current);
       }
     };
-  }, []); // <-- ARRAY DE DEPENDÊNCIAS VAZIO.
+  }, []); 
+
+
+  // ==================================================================
+  // HOOK 2: Observa a conclusão do carregamento real (Gatilho de Saída)
+  // ==================================================================
+  useEffect(() => {
+    console.log(`LOG: LOADING_SCREEN - useEffect [isLoading] rodou. Novo isLoading: ${isLoading}.`);
+    
+    // Se o AuthContext terminou o carregamento.
+    if (!isLoading) { 
+        console.log('LOG: LOADING_SCREEN - Detecção CRÍTICA: Auth terminou. Forçando saída via Hook 2.');
+        
+        // A CORREÇÃO FINAL: Usamos setTimeout(0) para garantir que a função de saída
+        // seja chamada no próximo tick da fila de eventos, quebrando o bloqueio.
+        setTimeout(() => {
+  if (progress < 95) {
+    setProgress(95);
+  }
+  finishLoading();
+}, 150);
+    }
+  }, [isLoading, finishLoading]); // Apenas reage à prop isLoading
 
   return (
     <>
       <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease-out;
+        }
+        
         .loading-overlay {
           position: fixed; top: 0; left: 0;
           width: 100vw; height: 100vh;
@@ -187,28 +256,28 @@ export default function LoadingScreen({ isLoading, onLoaded }: LoadingScreenProp
         .loading-overlay.visible {
           opacity: 1;
         }
-
-        /* VÍDEOS E FILTRO REMOVIDOS */
-
+        
         #particle-canvas {
-          position: absolute; top: 0; left: 0;
-          width: 100%; height: 100%;
-          z-index: 3;
-          /* AJUSTE NA OPACIDADE PARA O FUNDO PRETO */
-          opacity: 0.3;
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 3;
+            opacity: 0.3;
         }
 
         .loading-content {
-          position: relative; z-index: 4;
+          position: relative; 
+          z-index: 4;
           text-align: center;
-          display: flex; flex-direction: column;
+          display: flex; 
+          flex-direction: column;
           align-items: center;
+          margin-bottom: 20vh;
           text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
         }
-
+        
         .logo-container {
-          position: relative;
-          margin-bottom: 40px;
+            position: relative;
+            margin-bottom: 40px;
         }
         .logo-container::before {
           content: '';
@@ -224,18 +293,17 @@ export default function LoadingScreen({ isLoading, onLoaded }: LoadingScreenProp
           50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
         }
 
-        /* NOVO ESTILO PARA O "IN" LOGO */
         .loading-logo-box {
           width: 80px; height: 80px;
           position: relative;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 2.5rem; /* 40px */
+          font-size: 2.5rem; 
           font-weight: bold;
           color: white;
-          border-radius: 1.25rem; /* 20px */
-          background-image: linear-gradient(to bottom right, #a855f7, #60a5fa); /* purple-500 to blue-400 */
+          border-radius: 1.25rem; 
+          background-image: linear-gradient(to bottom right, #a855f7, #60a5fa); 
           filter: drop-shadow(0 0 20px rgba(192, 132, 252, 0.6));
         }
 
@@ -275,18 +343,15 @@ export default function LoadingScreen({ isLoading, onLoaded }: LoadingScreenProp
       `}</style>
 
       <div className={`loading-overlay ${show ? 'visible' : ''}`}>
-        {/* VÍDEO CONTAINER REMOVIDO */}
-
         <canvas id="particle-canvas" ref={canvasRef}></canvas>
 
         <div className="loading-content">
           <div className="logo-container">
-            {/* LOGO ATUALIZADA */}
             <div className="loading-logo-box">
               IN
             </div>
           </div>
-          <p key={message} className="loading-message loading-message-enter">
+          <p key={message} className="loading-message">
             {message}
           </p>
           <div className="progress-bar-container">
