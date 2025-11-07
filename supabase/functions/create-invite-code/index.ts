@@ -1,29 +1,21 @@
+// supabase/functions/invite-user/index.ts
+// VERSÃO v-GATILHO-SEGURO (A versão definitiva)
+
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
-// ==========================================================
-// ▼▼▼ A CORREÇÃO REAL ESTÁ AQUI ▼▼▼
-// O erro "does not provide an export named 'generate'"
-// significa que a função está no objeto 'v4' do módulo 'mod.ts'
-// ==========================================================
-import { v4 } from 'https://deno.land/std@0.177.0/uuid/mod.ts'
-// ==========================================================
 import { corsHeaders } from '../_shared/cors.ts'
 
-console.log("FUNÇÃO 'invite-user' INICIALIZADA (código-fonte v5 - importação corrigida).")
+console.log("FUNÇÃO 'invite-user' INICIALIZADA (código-fonte v-GATILHO-SEGURO).")
 
-// Função helper para criar um cliente em nome do *utilizador*
+// --- Funções Helper (sem alteração) ---
 function createSupabaseUserClient(req: Request): SupabaseClient {
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader) {
-    throw new Error('Utilizador não autenticado (sem cabeçalho Authorization).')
-  }
+  if (!authHeader) throw new Error('Utilizador não autenticado (sem cabeçalho Authorization).')
   return createClient(
     Deno.env.get('PROJECT_URL') ?? '',
-    Deno.env.get('PROJECT_ANON_KEY') ?? '', // Usamos a ANON key
+    Deno.env.get('PROJECT_ANON_KEY') ?? '',
     { global: { headers: { Authorization: authHeader } } }
   )
 }
-
-// Função helper para criar o cliente Admin (Service Role)
 function createSupabaseAdminClient(): SupabaseClient {
   return createClient(
     Deno.env.get('PROJECT_URL') ?? '',
@@ -31,107 +23,102 @@ function createSupabaseAdminClient(): SupabaseClient {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 }
+// -------------------------------------
 
 Deno.serve(async (req) => {
   console.log("Nova requisição recebida:", req.method)
   if (req.method === 'OPTIONS') {
-    // Responde ao preflight CORS
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // 1. Criar os clientes
+    // Passos 1-4 (autenticação, permissão, org_id) - Sem alteração
     const supabaseUserClient = createSupabaseUserClient(req) 
     const supabaseAdmin = createSupabaseAdminClient()       
-
-    // 2. Obter o ID do utilizador que está a chamar
-    console.log("Obtendo utilizador (auth.getUser)...")
     const { data: { user: callerUser }, error: callerError } = await supabaseUserClient.auth.getUser()
-    if (callerError || !callerUser) {
-      throw new Error(`Falha na autenticação: ${callerError?.message}`)
-    }
+    if (callerError || !callerUser) throw new Error(`Falha na autenticação: ${callerError?.message}`)
     console.log("Utilizador autenticado:", callerUser.id)
 
-    // 3. Verificar a permissão do *utilizador*
-    console.log("Verificando permissão (RPC get_my_role)...")
     const { data: role, error: rpcError } = await supabaseUserClient.rpc('get_my_role')
-    if (rpcError) {
-      throw new Error(`Falha ao verificar permissão (RPC): ${rpcError.message}`)
-    }
-    if (role !== 'admin') {
-      throw new Error(`Ação não autorizada. O utilizador tem a role '${role}', mas é necessária 'admin'.`)
-    }
+    if (rpcError) throw new Error(`Falha ao verificar permissão (RPC): ${rpcError.message}`)
+    if (role !== 'admin') throw new Error(`Ação não autorizada. Role necessária 'admin'.`)
     console.log("Permissão de Admin confirmada.")
 
-    // 4. Obter o organization_id do admin
-    console.log("Obtendo perfil do admin (organization_id)...")
     const { data: adminProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('organization_id')
       .eq('id', callerUser.id) 
       .single()
-
-    if (profileError || !adminProfile || !adminProfile.organization_id) {
-      throw new Error("Perfil do admin não encontrado ou não possui organization_id.")
-    }
+    if (profileError || !adminProfile || !adminProfile.organization_id) throw new Error("Perfil do admin não encontrado ou sem organization_id.")
     const organizationId = adminProfile.organization_id;
     console.log("Organization ID encontrado:", organizationId)
 
-    // 5. Obter dados do POST
-    console.log("Lendo JSON do body...")
+    // Passo 5: Obter dados - Sem alteração
     const { email, fullName, jobTitle, role: newUserRole } = await req.json()
-    if (!email || !fullName || !newUserRole) {
-      throw new Error("Email, Nome e Função são obrigatórios.")
-    }
+    if (!email || !fullName || !newUserRole) throw new Error("Email, Nome e Função são obrigatórios.")
     console.log("Dados recebidos:", { email, fullName, newUserRole })
 
-    // 6. Criar o novo usuário (autenticação)
-    console.log("Criando novo utilizador (auth.admin.createUser)...")
     // ==========================================================
-    // ▼▼▼ CORREÇÃO DA CHAMADA DA FUNÇÃO ▼▼▼
-    // A importação 'v4' é um objeto que tem a função 'generate'
+    // ▼▼▼ A CORREÇÃO DE LÓGICA (GATILHO + UPSERT) ▼▼▼
     // ==========================================================
-    const tempPassword = `pwd_${v4.generate()}`; 
-    // ==========================================================
+
+    // Passo 6: Criar o usuário (Passando DADOS FALSOS para o gatilho)
+    console.log("Criando novo utilizador (auth) e satisfazendo gatilho...")
+    const tempPassword = `pwd_${crypto.randomUUID()}`;
+    
     const { data: newUserData, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: tempPassword,
       email_confirm: true,
-      user_metadata: { full_name: fullName },
+      user_metadata: { 
+        full_name: fullName,
+        job_title: jobTitle,
+        role: newUserRole, // Passamos o role correto
+        organization_id: organizationId, // Passamos a org correta
+        // --- Dados falsos para satisfazer o gatilho (baseado na SignUpPage.tsx) ---
+        company_name: 'Convidado pelo Admin', // Placeholder
+        company_size: 'N/A', // Placeholder
+        industry: 'N/A', // Placeholder
+        phone: 'N/A', // Placeholder
+        document: 'N/A', // Placeholder
+        source: 'Convidado pelo Admin' // Placeholder
+      },
     })
 
     if (createUserError) {
+      // Se falhar agora, é 100% porque o usuário já existe
       throw new Error(`Falha ao criar usuário (auth): ${createUserError.message}`)
     }
     const newUser = newUserData.user;
     console.log("Novo utilizador criado (auth):", newUser.id)
 
-    // 7. Criar o perfil do novo usuário (database)
-    console.log("Inserindo perfil (db)...")
-    const { error: createProfileError } = await supabaseAdmin
+
+    // Passo 7: USAR "UPSERT" PARA GARANTIR OS DADOS CORRETOS
+    // Mesmo que o gatilho tenha criado o perfil, vamos ATUALIZAR
+    // para garantir que organization_id e role estão 100% corretos.
+    console.log("Fazendo Upsert/Correção do perfil (db)...")
+    const { error: upsertProfileError } = await supabaseAdmin
       .from('profiles')
-      .insert({
-        id: newUser.id,
+      .upsert({
+        id: newUser.id, // Chave primária
         organization_id: organizationId,
         full_name: fullName,
         job_title: jobTitle,
         role: newUserRole,
+        // (Não precisamos mais dos campos falsos aqui, mas não faz mal)
       })
       
-    if (createProfileError) {
-      console.error("ERRO ao inserir perfil. Revertendo utilizador...")
+    if (upsertProfileError) {
+      console.error("ERRO ao fazer Upsert do perfil. Revertendo utilizador...")
       await supabaseAdmin.auth.admin.deleteUser(newUser.id) // Reverte
-      throw new Error(`Falha ao criar perfil (db): ${createProfileError.message}`)
+      throw new Error(`Falha ao criar/atualizar perfil (db): ${upsertProfileError.message}`)
     }
-    console.log("Perfil inserido com sucesso (db).")
+    console.log("Perfil criado/atualizado com sucesso (db).")
 
-    // 8. Gerar e armazenar o token de convite
+    // Passo 8: Gerar e armazenar o token de convite (Sem alteração)
     console.log("Inserindo token (user_invites)...")
-    // ==========================================================
-    // ▼▼▼ CORREÇÃO DA CHAMADA DA FUNÇÃO ▼▼▼
-    // ==========================================================
-    const inviteToken = `${v4.generate().substring(0, 8)}`.toUpperCase(); 
-    // ==========================================================
+    const inviteToken = `${crypto.randomUUID().substring(0, 8)}`.toUpperCase();
+    
     const { error: tokenError } = await supabaseAdmin
       .from('user_invites')
       .insert({
@@ -147,7 +134,11 @@ Deno.serve(async (req) => {
     }
     console.log("Token inserido com sucesso:", inviteToken)
 
-    // 9. Sucesso!
+    // ==========================================================
+    // ▲▲▲ FIM DA CORREÇÃO DE LÓGICA ▲▲▲
+    // ==========================================================
+
+    // Passo 9: Sucesso!
     console.log("SUCESSO. Retornando token para o cliente.")
     return new Response(
       JSON.stringify({ invite_token: inviteToken }),

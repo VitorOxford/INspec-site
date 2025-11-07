@@ -58,7 +58,7 @@ const UserInviteModal: React.FC<UserInviteModalProps> = ({ isOpen, onClose, avai
     try {
       console.log("FRONTEND: Invocando função 'invite-user'...");
       // Chama a Supabase Edge Function 'invite-user'
-      const { data, error } = await supabase.functions.invoke('invite-user', {
+      const { data, error } = await supabase.functions.invoke('create-invite-code', {
         body: {
           email,
           fullName: name,
