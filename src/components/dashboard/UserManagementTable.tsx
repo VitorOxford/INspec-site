@@ -1,200 +1,281 @@
-// src/components/dashboard/UserInviteModal.tsx
+// src/components/dashboard/UserManagementTable.tsx
+
 import React, { useState } from 'react';
 import { 
-  Mail, Briefcase, Plus, X, UserPlus, Zap, 
-  Send // <<<<<< CORREÇÃO: Ícone 'Send' importado aqui
+  Plus, Search, Edit, Trash2, UserPlus, Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+// IMPORTAÇÃO CORRETA DO MODAL (DO NOVO ARQUIVO)
+import UserInviteModal from './UserInviteModal'; 
 
-// Tipo de props para o Modal
-interface UserInviteModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  // TODO: Em uma implementação real, passaria a lista de organizações disponíveis para o Admin aqui
-  availableRoles: string[]; 
+// --- Tipos e Dados Mockados ---
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'employee';
+  jobTitle: string;
+  status: 'online' | 'idle' | 'offline';
+  lastActivity: string;
 }
 
-const UserInviteModal: React.FC<UserInviteModalProps> = ({ isOpen, onClose, availableRoles }) => {
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
-  const [role, setRole] = useState('employee'); // Padrão
-  const [loading, setLoading] = useState(false);
-  const [successToken, setSuccessToken] = useState<string | null>(null);
-  const { profile } = useAuth(); // Para pegar o organization_id do Admin
+const mockUsers: User[] = [
+  { id: '1', name: 'Ana Paula Silva', email: 'ana@empresa.com', role: 'admin', jobTitle: 'Diretora de Operações', status: 'online', lastActivity: 'Agora mesmo' },
+  { id: '2', name: 'Carlos Mendes', email: 'carlos@empresa.com', role: 'employee', jobTitle: 'Desenvolvedor Front-end', status: 'idle', lastActivity: 'Há 5 min' },
+  { id: '3', name: 'Ricardo Ferreira', email: 'ricardo@empresa.com', role: 'employee', jobTitle: 'Analista de QA', status: 'offline', lastActivity: '08:00' },
+  { id: '4', name: 'Juliana Costa', email: 'juliana@empresa.com', role: 'employee', jobTitle: 'Designer UI/UX', status: 'online', lastActivity: 'Há 1 min' },
+  { id: '5', name: 'Bruno Silva', email: 'bruno@empresa.com', role: 'employee', jobTitle: 'Desenvolvedor Back-end', status: 'idle', lastActivity: '14:30' },
+];
 
-  if (!isOpen) return null;
 
-  // Lógica de Cadastro/Convite (Backend Mockado)
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setSuccessToken(null);
+// --- Sub-Componentes de UI ---
 
-    // MOCK: Em uma aplicação real, aqui o Supabase faria:
-    // 1. Chamar uma Função Edge (Serverless) para:
-    //    a. Criar o usuário (supabase.auth.admin.createUser)
-    //    b. Inserir o perfil com o organization_id do Admin (profile?.organization_id)
-    //    c. GERAR UM TOKEN ÚNICO E CURTO (Ex: "ABC-123456")
-    //    d. Enviar e-mail de convite (opcional)
+const StatusBadge: React.FC<{ status: User['status'] }> = ({ status }) => {
+  const baseClasses = "flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full";
+  let statusClasses = '';
+  let dotClass = '';
+  let label = '';
 
-    try {
-      // Simulação de delay de API e geração de Token
-      await new Promise(resolve => setTimeout(resolve, 1500)); 
-      
-      const generatedToken = Math.random().toString(36).substring(2, 8).toUpperCase() + '-' + Math.floor(Math.random() * 1000);
-      
-      setSuccessToken(generatedToken);
-      
-      // Limpa os campos após sucesso
-      setEmail('');
-      setName('');
-      setJobTitle('');
-      setRole('employee');
+  switch (status) {
+    case 'online':
+      statusClasses = 'bg-green-500/20 text-green-400';
+      dotClass = 'bg-green-500';
+      label = 'Online';
+      break;
+    case 'idle':
+      statusClasses = 'bg-yellow-500/20 text-yellow-400';
+      dotClass = 'bg-yellow-500';
+      label = 'Inativo';
+      break;
+    case 'offline':
+    default:
+      statusClasses = 'bg-slate-500/20 text-slate-400';
+      dotClass = 'bg-slate-500';
+      label = 'Offline';
+      break;
+  }
 
-    } catch (error) {
-      console.error("Erro ao convidar usuário:", error);
-      // Aqui você lidaria com erros (ex: usuário já existe)
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const modalBg = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800';
-  const textPrimary = 'text-slate-900 dark:text-white';
-  const textSecondary = 'text-slate-500 dark:text-slate-400';
-
-  // --- Renderização do Modal ---
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity">
-      <div className={cn("relative w-full max-w-lg rounded-xl p-8 shadow-2xl", modalBg)}>
-        
-        {/* Close Button */}
-        <button onClick={onClose} className={cn("absolute top-4 right-4 p-2 rounded-full", textSecondary, "hover:bg-slate-200 dark:hover:bg-slate-700")}>
-          <X className="h-5 w-5" />
-        </button>
-
-        {/* Header */}
-        <div className="text-center mb-8">
-          <UserPlus className="h-8 w-8 text-purple-500 mx-auto mb-3" />
-          <h2 className={cn("text-2xl font-bold", textPrimary)}>
-            Convidar Novo Colaborador
-          </h2>
-          <p className={cn("text-sm mt-1", textSecondary)}>
-            Preencha os dados e gere o código de monitoramento.
-          </p>
-        </div>
-
-        {/* Token de Sucesso */}
-        {successToken ? (
-          <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-lg space-y-4 animate-fadeIn">
-            <Zap className="h-8 w-8 text-green-500 mx-auto" />
-            <h3 className="text-xl font-semibold text-green-400">Convite Enviado!</h3>
-            <p className={cn("text-sm", textSecondary)}>
-              Peça ao colaborador para inserir este código no **App Electron/Desktop** e o **ID da sua Organização**.
-            </p>
-            
-            {/* Display do Código */}
-            <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
-                <p className="text-xs text-slate-500 mb-1 uppercase">Código do Colaborador</p>
-                <code className="text-2xl font-mono font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400 select-all">
-                    {successToken}
-                </code>
-            </div>
-            
-            {/* Display do Organization ID */}
-            <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
-                <p className="text-xs text-slate-500 mb-1 uppercase">ID da Organização</p>
-                <code className="text-xl font-mono font-bold text-white select-all">
-                    {profile?.organization_id || 'ORG-NOT-SET'} 
-                </code>
-            </div>
-            
-            <Button onClick={onClose} className="w-full mt-4 bg-green-600 hover:bg-green-700">
-                Fechar e Gerenciar
-            </Button>
-          </div>
-        ) : (
-          /* Formulário de Convite */
-          <form onSubmit={handleInvite} className="space-y-5">
-            <div>
-              <Label htmlFor="name" className={textPrimary}>Nome Completo</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Ex: João da Silva"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="mt-1 dark:bg-slate-800/80 dark:border-slate-700 dark:text-white"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email" className={textPrimary}>E-mail de Cadastro</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="exemplo@empresa.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="mt-1 dark:bg-slate-800/80 dark:border-slate-700 dark:text-white"
-              />
-            </div>
-            
-            <div className='grid grid-cols-2 gap-4'>
-                <div>
-                    <Label htmlFor="jobTitle" className={textPrimary}>Cargo/Função</Label>
-                    <Input
-                        id="jobTitle"
-                        type="text"
-                        placeholder="Ex: Dev Jr"
-                        value={jobTitle}
-                        onChange={(e) => setJobTitle(e.target.value)}
-                        required
-                        className="mt-1 dark:bg-slate-800/80 dark:border-slate-700 dark:text-white"
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="role" className={textPrimary}>Função no INspec</Label>
-                    <div className="relative mt-1">
-                        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                        <select
-                        id="role"
-                        value={role}
-                        onChange={(e) => setRole(e.target.value)}
-                        required
-                        className="flex h-10 w-full appearance-none rounded-md border border-input bg-transparent px-3 py-2 text-sm pl-11 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-slate-800/80 dark:border-slate-700 dark:text-white"
-                        >
-                            <option value="employee">Colaborador</option>
-                            <option value="admin">Administrador</option>
-                        </select>
-                        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-                          <svg className="h-4 w-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-                          </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              disabled={loading}
-            >
-              {loading ? "Enviando Convite..." : "Convidar e Gerar Código"}
-              {!loading && <Send className="ml-2 h-5 w-5" />}
-            </Button>
-          </form>
-        )}
-      </div>
-    </div>
+    <span className={cn(baseClasses, statusClasses)}>
+      <span className={cn('h-2 w-2 rounded-full', dotClass)} />
+      {label}
+    </span>
   );
 };
 
-export default UserInviteModal;
+
+// --- Componente Principal ---
+
+export default function UserManagementTable() {
+  const [users, setUsers] = useState<User[]>(mockUsers);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false); // NOVO ESTADO DO MODAL
+  const { resolvedTheme } = useTheme();
+
+  // Filtra usuários com base no termo de pesquisa
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.jobTitle.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const tableBg = resolvedTheme === 'dark' ? 'bg-slate-800/50' : 'bg-white';
+  const tableHeader = resolvedTheme === 'dark' ? 'text-slate-400' : 'text-slate-600';
+  const tableRowHover = resolvedTheme === 'dark' ? 'hover:bg-slate-700/50' : 'hover:bg-slate-100';
+
+
+  // Lógica de Ação (Placeholder)
+  const handleEdit = (id: string) => console.log('Editar usuário:', id);
+  const handleDelete = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este colaborador?')) {
+      setUsers(users.filter(user => user.id !== id));
+      console.log('Excluir usuário:', id);
+    }
+  };
+  // ATUALIZAÇÃO: Abre o Modal
+  const handleInvite = () => setIsModalOpen(true); 
+
+
+  return (
+    <div className="space-y-6">
+      
+      {/* Header e Barra de Pesquisa */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <h1 className="text-3xl font-bold text-white">Gestão de Colaboradores</h1>
+        <div className="flex w-full md:w-auto gap-3">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-500" />
+            <Input
+              type="text"
+              placeholder="Pesquisar por nome ou email..."
+              className={cn(
+                "pl-10 h-12",
+                resolvedTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+              )}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Botão Big Tech - Ação Principal (Abre o Modal) */}
+          <Button 
+            onClick={handleInvite}
+            className="h-12 px-5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg shadow-purple-500/30 whitespace-nowrap"
+          >
+            <UserPlus className="h-5 w-5 mr-2" /> 
+            Convidar Colaborador
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabela de Colaboradores (Agora um "Cartão" mais limpo) */}
+      <div className={cn("overflow-hidden rounded-xl border border-slate-700 shadow-2xl", tableBg)}>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-700">
+            
+            {/* Cabeçalho da Tabela */}
+            <thead className={resolvedTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-50'}>
+              <tr>
+                {/* <th>Email</th> removido para simplificar o cabeçalho */}
+                {['Colaborador', 'Cargo/Função', 'Função INspec', 'Status', 'Última Atividade', 'Ações'].map(header => (
+                  <th 
+                    key={header}
+                    scope="col"
+                    className={cn(
+                      "px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider",
+                      tableHeader
+                    )}
+                  >
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            
+            {/* Corpo da Tabela */}
+            <tbody className="divide-y divide-slate-700/50">
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <tr key={user.id} className={cn("transition-colors duration-200", tableRowHover)}>
+                    
+                    {/* Nome e Email (Combinados) */}
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="flex items-center">
+                        <img 
+                          className="h-10 w-10 rounded-full mr-4 border border-purple-500/50" 
+                          src={`https://api.dicebear.com/8.x/initials/svg?seed=${user.name}&backgroundType=gradient&backgroundColor=a855f7,60a5fa`} 
+                          alt={user.name} 
+                        />
+                        <div>
+                          <div className="text-sm font-medium text-white">{user.name}</div>
+                          <div className="text-xs text-slate-400">{user.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    
+                    {/* Cargo */}
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="text-sm text-white">{user.jobTitle}</div>
+                    </td>
+
+                    {/* Role (Função no INspec) */}
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <span className={cn(
+                        "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
+                        user.role === 'admin' ? 'bg-purple-600/20 text-purple-400' : 'bg-blue-600/20 text-blue-400'
+                      )}>
+                        {user.role === 'admin' ? 'Administrador' : 'Colaborador'}
+                      </span>
+                    </td>
+
+                    {/* Status de Atividade */}
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <StatusBadge status={user.status} />
+                    </td>
+
+                    {/* Última Atividade */}
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-400">
+                      {user.lastActivity}
+                    </td>
+
+                    {/* Ações (Botões Pequenos e Espaçados - Big Tech Style) */}
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="flex items-center space-x-1"> {/* Reduzido o espaço */}
+                        {/* Botão de Editar */}
+                        <Button
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEdit(user.id)}
+                          title="Editar"
+                          className={cn(
+                            "h-9 w-9 p-0", // Ligeiramente maior para clique
+                            resolvedTheme === 'dark' 
+                                ? "text-slate-400 hover:bg-slate-700 hover:text-white"
+                                : "text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                          )}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        
+                        {/* Botão de Excluir */}
+                        <Button
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDelete(user.id)}
+                          title="Excluir"
+                          className={cn(
+                            "h-9 w-9 p-0",
+                            "text-red-500 hover:bg-red-500/10 hover:text-red-400"
+                          )}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+
+                        {/* Botão de Configurações (Token/Reassociação) */}
+                        <Button
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => console.log(`Gerar token para ${user.name}`)}
+                          title="Gerar/Visualizar Token"
+                          className={cn(
+                            "h-9 w-9 p-0",
+                            "text-blue-500 hover:bg-blue-500/10 hover:text-blue-400"
+                          )}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-slate-500">
+                    Nenhum colaborador encontrado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* Footer da Tabela */}
+      <div className="text-sm text-slate-400">
+        Total de Colaboradores: {users.length}
+      </div>
+
+      {/* MODAL DE CONVITE */}
+      <UserInviteModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        availableRoles={['employee', 'admin']}
+      />
+    </div>
+  );
+}

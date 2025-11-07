@@ -31,7 +31,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Função para buscar o perfil de forma segura
+// Função para buscar o perfil de forma segura (sem alterações)
 const safeFetchProfile = async (userId: string) => {
   const { data: profileData, error: profileError } = await supabase
       .from('profiles')
@@ -53,61 +53,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null); 
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Começa como true
+  
+  // NOVO ESTADO: Controla se a verificação inicial de auth foi concluída
+  const [authChecked, setAuthChecked] = useState(false);
 
+  // Efeito 1: APENAS para o listener de autenticação
   useEffect(() => {
-    setLoading(true);
-    console.log("LOG: AuthContext - useEffect INICIADO");
+    console.log("LOG: AuthContext - Subscribing to onAuthStateChange");
 
-    const fetchSessionAndProfile = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) console.error("LOG: AuthContext - ERRO na sessão:", sessionError);
-
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log(`LOG: AuthContext - Auth State Change: ${event}`);
+        
         setSession(session);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
-        console.log(`LOG: AuthContext - Sessão obtida. User ID: ${currentUser?.id ? currentUser.id : 'null'}`);
-
-        if (session) {
-          const fetchedProfile = await safeFetchProfile(session.user.id);
-          setProfile(fetchedProfile);
-          console.log(`LOG: AuthContext - Profile set: ${fetchedProfile ? 'true' : 'false'}`);
-        } else {
-          setProfile(null);
-        }
-      } catch (e) {
-        console.error("LOG: AuthContext - Erro no fetch inicial:", e);
-      } finally {
-        setLoading(false);
-        console.log("LOG: AuthContext - Loading FINALIZADO.");
-      }
-    };
-    
-    fetchSessionAndProfile();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log(`LOG: AuthContext - Auth State Change: ${event}`);
-
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (event === 'SIGNED_IN' && session) {
-          setLoading(true);
-          const fetchedProfile = await safeFetchProfile(session.user.id);
-          setProfile(fetchedProfile);
-          setLoading(false);
-        } else if (event === 'SIGNED_OUT') {
-          setProfile(null);
-        }
+        
+        // Marca que a verificação inicial (ou mudança) de auth aconteceu.
+        // Isso vai disparar o Efeito 2.
+        setAuthChecked(true); 
       }
     );
 
     return () => {
+      console.log("LOG: AuthContext - Cleanup, unsubscribing listener.");
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Array vazio, roda apenas uma vez na montagem
+
+  
+  // Efeito 2: APENAS para buscar o perfil, reagindo ao usuário ou à verificação de auth
+  useEffect(() => {
+    // Não faz nada até que o Efeito 1 tenha rodado pelo menos uma vez
+    if (!authChecked) {
+      console.log("LOG: AuthContext - Profile Fetch esperando auth check...");
+      return;
+    }
+
+    if (user) {
+      // Usuário está logado, busca o perfil
+      console.log("LOG: AuthContext - User detectado, buscando perfil...");
+      // Garante que estamos carregando enquanto buscamos o perfil
+      setLoading(true); 
+      
+      safeFetchProfile(user.id)
+        .then((fetchedProfile) => {
+          setProfile(fetchedProfile);
+          console.log(`LOG: AuthContext - Profile set: ${fetchedProfile ? 'true' : 'false'}`);
+        })
+        .catch((e) => {
+          console.error("LOG: AuthContext - Erro na promise safeFetchProfile:", e);
+          setProfile(null);
+        })
+        .finally(() => {
+          // Finalmente, define o loading como false
+          setLoading(false);
+          console.log("LOG: AuthContext - Loading FINALIZADO (profile fetch completo).");
+        });
+    } else {
+      // Sem usuário (logado ou não), não estamos carregando
+      setProfile(null);
+      setLoading(false);
+      console.log("LOG: AuthContext - Sem usuário, definindo loading=false.");
+    }
+  }, [user, authChecked]); // Roda sempre que 'user' ou 'authChecked' mudar
 
   const signOut = async () => {
     await supabase.auth.signOut();
